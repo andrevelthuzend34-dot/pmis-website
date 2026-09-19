@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMIS — Editor HTML &amp; Embed</title>
+
+<!-- CodeMirror 5 (editor kode). Jika offline, aplikasi otomatis fallback ke textarea biasa. -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+
+<style>
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin:0; font-family:'Segoe UI', Tahoma, Arial, sans-serif; background:#0b1f30; color:#dce9f2; }
+#app { display:flex; height:100vh; }
+
+/* ---------- sidebar ---------- */
+#sidebar { width:290px; min-width:290px; background:#082a44; display:flex; flex-direction:column; border-right:1px solid #123c5e; }
+.brand { padding:16px; background:linear-gradient(135deg,#003b64,#005f8f); }
+.logo { font-size:20px; font-weight:800; letter-spacing:1px; color:#fff; }
+.logo span { color:#00d2ff; }
+.sub { font-size:12px; color:#9fc6dd; margin-top:2px; }
+.search { padding:10px; border-bottom:1px solid #123c5e; }
+.search input { width:100%; padding:8px 10px; border-radius:8px; border:1px solid #164a73; background:#0b3556; color:#e5f2fa; outline:none; }
+.search input::placeholder { color:#7ba7c2; }
+#fileList { flex:1; overflow-y:auto; }
+.file-item { padding:10px 14px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,.05); }
+.file-item:hover { background:#0d3a5c; }
+.file-item.active { background:#00b3e3; }
+.file-item.active .fname, .file-item.active .ftitle { color:#02283b; }
+.fname { font-weight:600; font-size:13.5px; }
+.ftitle { font-size:12px; color:#8fb6cd; margin-top:2px; }
+.mod { color:#ffb454; font-size:11px; }
+.file-item.active .mod { color:#7a3c00; }
+.sidefoot { padding:10px 14px; font-size:11.5px; color:#7ba7c2; border-top:1px solid #123c5e; }
+
+/* ---------- main ---------- */
+main { flex:1; display:flex; flex-direction:column; min-width:0; }
+#toolbar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#0d3556; border-bottom:1px solid #123c5e; flex-wrap:wrap; }
+.tab { padding:7px 16px; border-radius:8px; border:1px solid #1b5a86; background:#0b3556; color:#cfe6f4; cursor:pointer; font-weight:600; }
+.tab.active { background:#00b3e3; border-color:#00b3e3; color:#02283b; }
+.spacer { flex:1; }
+.chip { font-size:12px; padding:4px 10px; border-radius:99px; background:#123c5e; color:#9fd8b0; white-space:nowrap; }
+.chip.warn { color:#ffd28a; }
+.btn { padding:7px 12px; border-radius:8px; border:1px solid #1b5a86; background:#0b3556; color:#e5f2fa; cursor:pointer; font-size:13px; }
+.btn:hover { background:#12486f; }
+.btn.primary { background:#00b3e3; border-color:#00b3e3; color:#02283b; font-weight:700; }
+.btn.primary:disabled { opacity:.45; cursor:not-allowed; }
+
+.pane { display:none; flex:1; min-height:0; }
+.pane.active { display:flex; }
+#previewFrame { flex:1; width:100%; border:0; background:#fff; }
+
+/* ---------- editor ---------- */
+#pane-editor { flex-direction:column; }
+#cmHost { flex:1; min-height:0; }
+#cmHost .CodeMirror { height:100%; }
+#plainEditor { flex:1; width:100%; border:0; padding:12px; font-family:Consolas, Menlo, monospace; font-size:13px; background:#101c26; color:#d7e6f0; resize:none; outline:none; display:none; }
+.edithint { padding:6px 12px; font-size:12px; color:#7ba7c2; background:#0d3556; border-top:1px solid #123c5e; }
+
+/* ---------- form ---------- */
+#pane-form { overflow-y:auto; }
+#formWrap { width:100%; max-width:940px; margin:0 auto; padding:18px 16px 60px; }
+#formWrap h2 { margin-top:0; }
+.fbar { position:sticky; top:0; z-index:5; display:flex; gap:8px; align-items:center; background:#0b1f30; padding:10px 0; border-bottom:1px solid #123c5e; margin-bottom:14px; }
+.fsection { background:#0d3556; border:1px solid #164a73; border-radius:12px; padding:14px 16px; margin-bottom:16px; }
+.fsection h4 { margin:2px 0 10px; color:#9fd8b0; }
+.ftable { width:100%; border-collapse:collapse; margin-bottom:10px; }
+.ftable th { text-align:left; font-size:11.5px; color:#8fb6cd; padding:4px 6px; border-bottom:1px solid #164a73; }
+.ftable td { padding:3px 4px; }
+.ftable input { width:100%; padding:6px 8px; border-radius:6px; border:1px solid #164a73; background:#0b2a44; color:#e5f2fa; font-size:12.5px; }
+.btn.small { padding:3px 8px; font-size:12px; }
+.fhint { font-size:12px; color:#7ba7c2; margin:8px 0; }
+.fta { width:100%; padding:8px; border-radius:6px; border:1px solid #164a73; background:#0b2a44; color:#e5f2fa; font-size:12.5px; font-family:Consolas, Menlo, monospace; resize:vertical; }
+.flrow { display:flex; gap:8px; align-items:center; margin:6px 0; }
+.flrow span { font-size:12px; color:#8fb6cd; min-width:110px; }
+.flrow input { padding:6px 8px; border-radius:6px; border:1px solid #164a73; background:#0b2a44; color:#e5f2fa; font-size:12.5px; }
+.raingrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(56px,1fr)); gap:6px; margin-bottom:10px; }
+.raincell { display:flex; align-items:center; gap:5px; background:#0b2a44; border:1px solid #164a73; border-radius:6px; padding:5px 7px; font-size:12px; cursor:pointer; }
+.raincell input { accent-color:#00b3e3; }
+.formerr { background:#4a0e17; border:1px solid #7d2733; color:#ffd7d7; padding:12px; border-radius:10px; }
+
+/* ---------- embed ---------- */
+#pane-embed { overflow-y:auto; background:#0b1f30; }
+.embedwrap { max-width:860px; margin:0 auto; padding:24px 20px 60px; width:100%; }
+.embedwrap h2 { margin-top:0; }
+.muted { color:#8fb6cd; }
+.card { background:#0d3556; border:1px solid #164a73; border-radius:12px; padding:16px; margin-top:16px; }
+.card h3 { margin-top:0; }
+pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padding:12px; overflow:auto; font-family:Consolas, Menlo, monospace; font-size:12.5px; color:#bfe3f5; white-space:pre; }
+#embedDemo { background:#fff; border-radius:8px; padding:8px; }
+
+/* ---------- fullscreen ---------- */
+#fsOverlay { position:fixed; inset:0; background:rgba(2,16,27,.92); display:none; z-index:99; flex-direction:column; }
+#fsOverlay.open { display:flex; }
+#fsClose { align-self:flex-end; margin:10px; padding:8px 14px; border-radius:8px; border:1px solid #1b5a86; background:#0d3556; color:#fff; cursor:pointer; }
+#fsFrame { flex:1; border:0; background:#fff; margin:0 10px 10px; }
+
+@media (max-width: 760px) {
+  #app { flex-direction:column; }
+  #sidebar { width:100%; min-width:0; max-height:40vh; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="logo">PMIS<span>.</span>studio</div>
+      <div class="sub">HTML Editor &amp; Embed Generator</div>
+    </div>
+    <div class="search"><input id="searchInput" placeholder="Cari visual…"></div>
+    <div id="fileList"></div>
+    <div class="sidefoot" id="fileCount"></div>
+  </aside>
+
+  <main>
+    <div id="toolbar">
+      <button class="tab active" data-tab="preview">Preview</button>
+      <button class="tab" data-tab="form">Form</button>
+      <button class="tab" data-tab="editor">Editor</button>
+      <button class="tab" data-tab="embed">Embed</button>
+      <span class="spacer"></span>
+      <span id="statusChip" class="chip ok">Original</span>
+      <button id="btnSave" class="btn primary" disabled>💾 Simpan</button>
+      <button id="btnRevert" class="btn">↺ Kembalikan</button>
+      <button id="btnNewTab" class="btn">↗ Tab baru</button>
+      <button id="btnFull" class="btn">⛶ Layar penuh</button>
+      <button id="btnDownload" class="btn">⬇ Unduh</button>
+    </div>
+
+    <section id="pane-preview" class="pane active">
+      <iframe id="previewFrame" title="preview"></iframe>
+    </section>
+
+    <section id="pane-form" class="pane">
+      <div id="formWrap"><div id="formHost"></div></div>
+    </section>
+
+    <section id="pane-editor" class="pane">
+      <div id="cmHost"></div>
+      <textarea id="plainEditor" spellcheck="false"></textarea>
+      <div class="edithint">Ctrl/Cmd+S untuk simpan · setelah menyimpan, lihat hasilnya di tab Preview · kode tersimpan otomatis di browser ini</div>
+    </section>
+
+    <section id="pane-embed" class="pane">
+      <div class="embedwrap">
+        <h2>Embed visual ini ke website lain</h2>
+        <p class="muted">Salin salah satu kode di bawah, lalu tempel ke file HTML website tujuan.
+        Kode memakai alamat folder website ini saat ini (<b id="baseLabel"></b>). Setelah folder di-upload ke hosting
+        (mis. GitHub Pages / Netlify / server kantor), alamat akan otomatis mengikuti domain tersebut.</p>
+
+        <div class="card">
+          <h3>Cara 1 — iframe langsung (paling mudah)</h3>
+          <p>Tampilkan satu visual saja di halaman tujuan. Atur tinggi lewat <code>height</code>.</p>
+          <pre id="codeIframe" class="code"></pre>
+          <button class="btn copy" data-copy="codeIframe">📋 Salin kode</button>
+        </div>
+
+        <div class="card">
+          <h3>Cara 2 — semua visual dalam satu skrip (embed.js)</h3>
+          <p>Unduh <b>embed.js</b> (tombol di bawah), upload di folder yang sama dengan website tujuan, lalu tempel kode ini.
+          Visual yang tampil mengikuti <code>data-pmis="nama file"</code>; tanpa atribut itu, semua visual tampil berurutan.</p>
+          <pre id="codeEmbedJs" class="code"></pre>
+          <button class="btn copy" data-copy="codeEmbedJs">📋 Salin kode</button>
+        </div>
+
+        <div class="card">
+          <h3>Pratinjau hasil embed</h3>
+          <p class="muted">Beginilah tampilannya ketika visual ini disisipkan ke website lain (versi terkini di editor; jangan lupa klik Simpan agar permanen).</p>
+          <div id="embedDemo"></div>
+        </div>
+
+        <div class="card">
+          <h3>Unduh file untuk hosting</h3>
+          <p class="muted">Upload kedua file ini ke hosting/website tujuan Anda:</p>
+          <button id="btnDownload2" class="btn">⬇ Unduh HTML visual ini</button>
+          <button id="btnDownloadEmbed" class="btn">⬇ Unduh embed.js</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="fsOverlay">
+  <button id="fsClose">✕ Tutup (Esc)</button>
+  <iframe id="fsFrame" title="fullscreen"></iframe>
+</div>
+
+<!-- Sumber embed.js (teks polos, tidak dieksekusi) -->
+<script type="text/plain" id="embedJsSource">
+/* ==========================================================
+   embed.js — PMIS HTML Embed
+   ----------------------------------------------------------
+   Dipakai di website TUJUAN bersama variabel window.PMIS_EMBED.
+
+   1) Sisipkan data visual (salin dari tab Embed website PMIS):
+      window.PMIS_EMBED = { height: 520, files: [ ... ] };
+
+   2) Muat file embed.js (upload ke folder website tujuan):
+      script src="embed.js"
+
+   3) Tentukan tempat tampilnya visual:
+      div data-pmis="Peta Kordinat BM.htm" data-height="600"
+      Tanpa elemen data-pmis, semua visual tampil berurutan
+      di akhir halaman secara otomatis.
+   ========================================================== */
+(function () {
+  'use strict';
+
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+
+  function mount(el, code, height) {
+    var f = document.createElement('iframe');
+    f.setAttribute('style', 'width:100%;height:' + height + 'px;border:0;border-radius:8px;background:#fff');
+    f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-forms');
+    f.setAttribute('loading', 'lazy');
+    f.srcdoc = code;
+    el.appendChild(f);
+  }
+
+  ready(function () {
+    var data = window.PMIS_EMBED;
+    if (!data || !data.files || !data.files.length) return;
+    var defaultHeight = data.height || 520;
+
+    var targets = document.querySelectorAll('[data-pmis]');
+    for (var i = 0; i < targets.length; i++) {
+      var nm = targets[i].getAttribute('data-pmis');
+      var h = parseInt(targets[i].getAttribute('data-height'), 10) || defaultHeight;
+      var item = null;
+      for (var j = 0; j < data.files.length; j++) {
+        if (data.files[j].name === nm || data.files[j].title === nm) { item = data.files[j]; break; }
+      }
+      if (item) mount(targets[i], item.content, h);
+    }
+
+    if (!targets.length) {
+      var wrap = document.createElement('div');
+      wrap.setAttribute('style', 'max-width:960px;margin:0 auto;padding:16px');
+      for (var k = 0; k < data.files.length; k++) {
+        var it = data.files[k];
+        var h3 = document.createElement('h3');
+        h3.textContent = it.title || it.name;
+        var box = document.createElement('div');
+        mount(box, it.content, defaultHeight);
+        wrap.appendChild(h3);
+        wrap.appendChild(box);
+      }
+      document.body.appendChild(wrap);
+    }
+  });
+})();
+</script>
+
+<script src="data.js"></script>
+<script src="forms.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  var FILES = (window.PMIS_FILES || []).map(function (f) {
+    return { name: f.name, title: f.title || f.name, content: f.content };
+  });
+
+  var LS_KEY = 'pmis_html_overrides_v1';
+  var $ = function (id) { return document.getElementById(id); };
+
+  var fileList = $('fileList'), searchInput = $('searchInput');
+  var previewFrame = $('previewFrame');
+  var statusChip = $('statusChip'), btnSave = $('btnSave');
+
+  var cur = 0, tab = 'preview', dirty = false, cm = null;
+  var formHost = $('formHost'), formRead = null;
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ---------- penyimpanan lokal (localStorage) ---------- */
+  function loadOverrides() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }
+    catch (e) { return {}; }
+  }
+  function saveOverrides(o) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(o)); return true; }
+    catch (e) {
+      var err = document.createElement('div');
+      err.className = 'formerr';
+      err.textContent = 'Gagal menyimpan: ' + e.message;
+      document.body.prepend(err);
+      return false;
+    }
+  }
+  function getContent(i) {
+    var rec = loadOverrides()[FILES[i].name];
+    return (rec && typeof rec.content === 'string') ? rec.content : FILES[i].content;
+  }
+  function norm(s) { return String(s).replace(/\r\n/g, '\n'); }
+  function isModified(i) { return norm(getContent(i)) !== norm(FILES[i].content); }
+
+  /* ---------- sidebar ---------- */
+  function renderList() {
+    var q = (searchInput.value || '').toLowerCase();
+    fileList.innerHTML = '';
+    FILES.forEach(function (f, i) {
+      if (q && (f.name + ' ' + f.title).toLowerCase().indexOf(q) === -1) return;
+      var d = document.createElement('div');
+      d.className = 'file-item' + (i === cur ? ' active' : '');
+      d.innerHTML =
+        '<div class="fname">' + esc(f.name) + '</div>' +
+        '<div class="ftitle">' + esc(f.title) +
+        (isModified(i) ? ' <span class="mod">● diedit</span>' : '') + '</div>';
+      d.onclick = function () { selectFile(i); };
+      fileList.appendChild(d);
+    });
+    $('fileCount').textContent = FILES.length + ' visual · editan tersimpan otomatis di browser ini';
+  }
+
+  /* ---------- editor ---------- */
+  function initEditor(text) {
+    if (typeof CodeMirror !== 'undefined' && !cm) {
+      cm = CodeMirror($('cmHost'), {
+        value: text,
+        mode: 'htmlmixed',
+        theme: 'dracula',
+        lineNumbers: true,
+        lineWrapping: true,
+        tabSize: 2
+      });
+      cm.on('change', function () { markDirty(true); });
+      window.__cm = cm;   // hook untuk pengujian/pemakaian lanjutan
+      $('cmHost').style.display = 'block';
+      $('plainEditor').style.display = 'none';
+    } else if (cm) {
+      cm.setValue(text);
+    } else {
+      var ta = $('plainEditor');
+      ta.style.display = 'block';
+      if (ta._wired !== true) {
+        ta._wired = true;
+        ta.oninput = function () { markDirty(true); };
+      }
+      ta.value = text;
+    }
+  }
+  function editorValue() { return cm ? cm.getValue() : $('plainEditor').value; }
+
+  function markDirty(v) {
+    dirty = v;
+    btnSave.disabled = !v;
+    statusChip.textContent = v ? 'Ada perubahan'
+      : (isModified(cur) ? 'Tersimpan (versi edit)' : 'Original');
+    statusChip.className = 'chip ' + (v ? 'warn' : 'ok');
+  }
+
+  /* ---------- preview ---------- */
+  function renderPreview() { previewFrame.srcdoc = getContent(cur); }
+
+  /* ---------- tab ---------- */
+  function setTab(t) {
+    tab = t;
+    ['preview', 'form', 'editor', 'embed'].forEach(function (x) {
+      $('pane-' + x).classList.toggle('active', x === t);
+    });
+    document.querySelectorAll('.tab').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-tab') === t);
+    });
+    if (t === 'editor' && cm) cm.refresh();
+    if (t === 'form') buildForm();
+    if (t === 'embed') buildEmbedCodes();
+  }
+
+  /* ---------- pilih file ---------- */
+  function selectFile(i) {
+    cur = i;
+    dirty = false;
+    renderList();
+    initEditor(getContent(i));
+    markDirty(false);
+    renderPreview();
+    if (tab === 'embed') buildEmbedCodes();
+    if (tab === 'form') buildForm();
+    try { history.replaceState(null, '', '#' + encodeURIComponent(FILES[i].name)); } catch (e) {}
+  }
+
+  /* ---------- simpan / kembalikan ---------- */
+  function doSave() {
+    if (!dirty) return;
+    var o = loadOverrides();
+    if (norm(editorValue()) === norm(FILES[cur].content)) {
+      delete o[FILES[cur].name];   // tidak ada perubahan nyata — jangan simpan
+    } else {
+      o[FILES[cur].name] = { content: editorValue(), t: Date.now() };
+    }
+    if (saveOverrides(o)) {
+      dirty = false;
+      markDirty(false);
+      renderPreview();
+      renderList();
+    }
+  }
+  function doRevert() {
+    var o = loadOverrides();
+    delete o[FILES[cur].name];
+    saveOverrides(o);
+    dirty = false;
+    initEditor(getContent(cur));
+    markDirty(false);
+    renderPreview();
+    renderList();
+  }
+
+  /* ---------- unduh ---------- */
+  function download(name, text, mime) {
+    var blob = new Blob([text], { type: (mime || 'text/html') + ';charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+
+  /* ---------- kode embed ---------- */
+  function buildEmbedCodes() {
+    var base = location.href.replace(/[^\/]*$/, '');
+    var previewUrl = base + 'preview.html?f=' + encodeURIComponent(FILES[cur].name);
+    var embedUrl = base + 'embed.js';
+    $('baseLabel').textContent = base;
+
+    $('codeIframe').textContent =
+      '<iframe src="' + previewUrl + '"\n' +
+      '        style="width:100%;height:520px;border:0;border-radius:8px"\n' +
+      '        loading="lazy"></iframe>';
+
+    var S = '<' + 'script', E = '<' + '/script';
+    var entry = { name: FILES[cur].name, title: FILES[cur].title, content: editorValue() };
+    var json = JSON.stringify({ height: 520, files: [entry] }, null, 2);
+
+    $('codeEmbedJs').textContent =
+      '<!-- 1) Data visual -->\n' +
+      S + '>window.PMIS_EMBED = ' + json + ';' + E + '>\n\n' +
+      '<!-- 2) Skrip embed (upload embed.js ke folder yang sama) -->\n' +
+      S + ' src="embed.js">' + E + '>\n\n' +
+      '<!-- 3) (opsional) tempat tampilnya visual -->\n' +
+      '<div data-pmis="' + FILES[cur].name + '" data-height="520"></div>';
+
+    /* pratinjau hasil embed */
+    var demo = $('embedDemo');
+    demo.innerHTML = '';
+    var f = document.createElement('iframe');
+    f.setAttribute('style', 'width:100%;height:420px;border:0;border-radius:6px');
+    f.srcdoc = editorValue();
+    demo.appendChild(f);
+  }
+
+  /* ---------- form terstruktur ---------- */
+  function buildForm() {
+    formHost.innerHTML = '';
+    formRead = null;
+    var def = (window.PMIS_FORMS || {})[FILES[cur].name];
+    if (!def) {
+      var d = document.createElement('div');
+      d.className = 'formerr';
+      d.textContent = 'Visual ini belum punya form khusus. Gunakan tab Editor untuk mengubah kode HTML-nya.';
+      formHost.appendChild(d);
+      return;
+    }
+    var content = getContent(cur);
+    try {
+      var model = def.parse(content);
+    } catch (e) {
+      var d2 = document.createElement('div');
+      d2.className = 'formerr';
+      d2.textContent = 'Gagal membaca data visual: ' + e.message + ' — gunakan tab Editor.';
+      formHost.appendChild(d2);
+      return;
+    }
+    var h = document.createElement('h2');
+    h.textContent = def.label;
+    formHost.appendChild(h);
+
+    var bar = document.createElement('div');
+    bar.className = 'fbar';
+    var bApply = document.createElement('button');
+    bApply.className = 'btn primary';
+    bApply.textContent = '💾 Terapkan & Simpan';
+    bApply.onclick = function () { applyForm(false); };
+    var bPrev = document.createElement('button');
+    bPrev.className = 'btn';
+    bPrev.textContent = '👁 Terapkan & lihat hasil';
+    bPrev.onclick = function () { applyForm(true); };
+    var note = document.createElement('span');
+    note.className = 'chip';
+    note.textContent = 'Form → kode HTML otomatis';
+    bar.appendChild(bApply); bar.appendChild(bPrev); bar.appendChild(note);
+    formHost.appendChild(bar);
+
+    formRead = def.render(formHost, model);
+  }
+
+  function applyForm(goPreview) {
+    if (!formRead) return;
+    var def = (window.PMIS_FORMS || {})[FILES[cur].name];
+    var model = formRead();
+    var content;
+    try {
+      content = def.serialize(FILES[cur].content, model);
+    } catch (e) {
+      var err = document.createElement('div');
+      err.className = 'formerr';
+      err.textContent = 'Gagal menulis kode: ' + e.message;
+      formHost.prepend(err);
+      return;
+    }
+    if (norm(content) === norm(getContent(cur))) return;   // tidak ada perubahan
+    initEditor(content);
+    var o = loadOverrides();
+    o[FILES[cur].name] = { content: content, t: Date.now() };
+    if (saveOverrides(o)) {
+      dirty = false;
+      markDirty(false);
+      renderPreview();
+      renderList();
+      buildForm();
+      if (goPreview) setTab('preview');
+    }
+  }
+
+  /* ---------- tombol ---------- */
+  btnSave.onclick = doSave;
+  $('btnRevert').onclick = doRevert;
+
+  $('btnNewTab').onclick = function () {
+    window.open('preview.html?f=' + encodeURIComponent(FILES[cur].name), '_blank');
+  };
+
+  function currentText() { return editorValue(); }
+  $('btnDownload').onclick = function () { download(FILES[cur].name, currentText()); };
+  $('btnDownload2').onclick = function () { download(FILES[cur].name, currentText()); };
+  $('btnDownloadEmbed').onclick = function () {
+    download('embed.js', $('embedJsSource').textContent.trim(), 'text/javascript');
+  };
+
+  $('btnFull').onclick = function () {
+    $('fsFrame').srcdoc = currentText();
+    $('fsOverlay').classList.add('open');
+  };
+  $('fsClose').onclick = function () { $('fsOverlay').classList.remove('open'); };
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') $('fsOverlay').classList.remove('open');
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      if (tab === 'form') applyForm(false); else doSave();
+    }
+  });
+
+  document.querySelectorAll('.tab').forEach(function (b) {
+    b.onclick = function () { setTab(b.getAttribute('data-tab')); };
+  });
+
+  searchInput.oninput = renderList;
+
+  document.querySelectorAll('.copy').forEach(function (b) {
+    b.onclick = function () {
+      var text = $(b.getAttribute('data-copy')).textContent;
+      var label = b.textContent;
+      function done() {
+        b.textContent = '✓ Tersalin';
+        setTimeout(function () { b.textContent = label; }, 1500);
+      }
+      function fallback() {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) {}
+        ta.remove();
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+    };
+  });
+
+  window.addEventListener('hashchange', function () {
+    var h = '';
+    try { h = decodeURIComponent(location.hash.replace(/^#/, '')); } catch (e) {}
+    if (!h) return;
+    for (var i = 0; i < FILES.length; i++) {
+      if (FILES[i].name === h && i !== cur) selectFile(i);
+    }
+  });
+
+  window.addEventListener('beforeunload', function (e) {
+    if (dirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  /* ---------- inisialisasi ---------- */
+  if (!FILES.length) {
+    document.body.innerHTML = '<p style="padding:24px">data.js tidak ditemukan / kosong. Jalankan <code>node build-data.js</code> terlebih dahulu.</p>';
+    return;
+  }
+
+  var initial = 0;
+  var h = '';
+  try { h = decodeURIComponent(location.hash.replace(/^#/, '')); } catch (e) {}
+  FILES.forEach(function (f, i) { if (f.name === h) initial = i; });
+
+  selectFile(initial);
+  setTab('preview');
+})();
+</script>
+</body>
+</html>

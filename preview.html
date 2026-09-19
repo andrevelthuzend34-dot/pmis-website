@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview Visual PMIS</title>
+<style>
+  html, body { margin:0; padding:0; background:#fff; }
+  body { font-family:'Segoe UI', Arial, sans-serif; }
+  #wrap { width:100%; min-height:100vh; }
+  #err { display:none; padding:32px; font-size:15px; color:#b00020; }
+  /* Iframe di dalam srcdoc perlu tinggi memenuhi layar */
+  iframe { border:0; width:100%; height:100vh; display:block; }
+</style>
+</head>
+<body>
+
+<div id="wrap"></div>
+<div id="err">Visual tidak ditemukan. Gunakan tautan dari tab <b>Embed</b> di aplikasi utama (index.html).</div>
+
+<script src="data.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var LS_KEY = 'pmis_html_overrides_v1';
+  var wrap = document.getElementById('wrap');
+  var err = document.getElementById('err');
+
+  var q = new URLSearchParams(location.search);
+  var name = q.get('f') || '';
+  var h = parseInt(q.get('h'), 10);
+
+  function fail() {
+    wrap.style.display = 'none';
+    err.style.display = 'block';
+  }
+
+  function getFiles() {
+    if (window.PMIS_EMBED && window.PMIS_EMBED.files && window.PMIS_EMBED.files.length) {
+      return window.PMIS_EMBED.files;
+    }
+    if (window.PMIS_FILES && window.PMIS_FILES.length) {
+      return window.PMIS_FILES.map(function (f) {
+        return { name: f.name, title: f.title, content: f.content };
+      });
+    }
+    return [];
+  }
+
+  var files = getFiles();
+  if (!files.length) return fail();
+
+  var idx = -1;
+  for (var i = 0; i < files.length; i++) {
+    if (files[i].name === name || files[i].title === name) { idx = i; break; }
+  }
+  if (idx === -1 && files.length === 1) idx = 0;   // mode embed tunggal
+  if (idx === -1) return fail();
+
+  /* Jika disematkan lewat embed.js, pakai konten yang dikirim.
+     Jika dibuka langsung dari website ini, cek versi edit (localStorage). */
+  var content = files[idx].content;
+  if (!window.PMIS_EMBED) {
+    try {
+      var o = JSON.parse(localStorage.getItem(LS_KEY)) || {};
+      var rec = o[files[idx].name];
+      if (rec && typeof rec.content === 'string') content = rec.content;
+    } catch (e) {}
+  }
+
+  var frame = document.createElement('iframe');
+  frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-forms');
+  if (!isNaN(h) && h > 0) frame.style.height = h + 'px';
+  frame.srcdoc = content;
+  wrap.appendChild(frame);
+})();
+</script>
+
+</body>
+</html>
