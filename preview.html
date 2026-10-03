@@ -18,9 +18,22 @@
 <div id="wrap"></div>
 <div id="err">Visual tidak ditemukan. Gunakan tautan dari tab <b>Embed</b> di aplikasi utama (index.html).</div>
 
-<script src="data.js"></script>
 <script>
+/* Muat data.js dengan cache-buster agar SELALU versi terbaru hasil Publish,
+   tidak terjebak cache browser/CDN GitHub Pages (max-age 10 menit). */
 (function () {
+  var s = document.createElement('script');
+  s.src = 'data.js?v=' + Date.now();
+  s.onload = function () { if (window.__pmisStart) window.__pmisStart(); };
+  s.onerror = function () {
+    var err = document.getElementById('err');
+    if (err) err.style.display = 'block';
+  };
+  document.head.appendChild(s);
+})();
+</script>
+<script>
+window.__pmisStart = function () {
   'use strict';
 
   var LS_KEY = 'pmis_html_overrides_v1';
@@ -74,7 +87,7 @@
   if (!isNaN(h) && h > 0) frame.style.height = h + 'px';
   frame.srcdoc = content;
   wrap.appendChild(frame);
-})();
+};
 </script>
 
 </body>

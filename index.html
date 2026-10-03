@@ -97,6 +97,31 @@ pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padd
 #fsClose { align-self:flex-end; margin:10px; padding:8px 14px; border-radius:8px; border:1px solid #1b5a86; background:#0d3556; color:#fff; cursor:pointer; }
 #fsFrame { flex:1; border:0; background:#fff; margin:0 10px 10px; }
 
+/* ---------- publish ---------- */
+.btn.publish { background:#0a8f3c; border-color:#0a8f3c; color:#fff; font-weight:700; }
+.btn.publish:hover { background:#0ca447; }
+#pubOverlay { position:fixed; inset:0; background:rgba(2,16,27,.92); display:none; z-index:100; }
+#pubOverlay.open { display:flex; align-items:center; justify-content:center; }
+.pubbox { width:min(640px,92vw); max-height:88vh; overflow-y:auto; background:#0d3556; border:1px solid #1b5a86; border-radius:12px; padding:18px 20px; }
+.pubhead { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.pubhead h2 { margin:0 0 4px; font-size:18px; }
+#pubClose { padding:6px 10px; border-radius:8px; border:1px solid #1b5a86; background:#0b3556; color:#e5f2fa; cursor:pointer; }
+.pubmuted { font-size:12.5px; color:#9fc6dd; margin:6px 0; line-height:1.5; }
+.pubmuted a { color:#4fc3f7; }
+.pubsec { margin-top:14px; }
+.pubsec > label { display:block; font-size:13px; font-weight:600; color:#cfe6f4; margin-bottom:6px; }
+.pubrow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+#pubToken { flex:1; min-width:220px; padding:8px 10px; border-radius:8px; border:1px solid #164a73; background:#0b3556; color:#e5f2fa; outline:none; font-family:monospace; font-size:12.5px; }
+.pubcheck { display:flex; align-items:center; gap:6px; font-size:12.5px; color:#9fc6dd; font-weight:400; cursor:pointer; }
+.pubfiles { max-height:160px; overflow-y:auto; border:1px solid #164a73; border-radius:8px; padding:4px 0; background:#0b2b46; }
+.pubfile { padding:6px 12px; font-size:13px; border-bottom:1px solid rgba(255,255,255,.05); }
+.pubfile:last-child { border-bottom:0; }
+.pubbar { display:flex; align-items:center; gap:12px; margin-top:16px; flex-wrap:wrap; }
+.pubok { color:#7be3a2; font-weight:700; }
+.puberr { color:#ff9b9b; font-weight:600; }
+#pubLog { display:none; white-space:pre-wrap; font-family:monospace; font-size:12px; color:#bfe0f2; background:#082a44; border:1px solid #123c5e; border-radius:8px; padding:10px 12px; margin-top:12px; max-height:180px; overflow-y:auto; }
+#pubLog.has { display:block; }
+
 @media (max-width: 760px) {
   #app { flex-direction:column; }
   #sidebar { width:100%; min-width:0; max-height:40vh; }
@@ -129,6 +154,7 @@ pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padd
       <button id="btnNewTab" class="btn">↗ Tab baru</button>
       <button id="btnFull" class="btn">⛶ Layar penuh</button>
       <button id="btnDownload" class="btn">⬇ Unduh</button>
+      <button id="btnPublish" class="btn publish" title="Simpan perubahan ke GitHub (server)">🚀 Publish</button>
     </div>
 
     <section id="pane-preview" class="pane active">
@@ -142,7 +168,7 @@ pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padd
     <section id="pane-editor" class="pane">
       <div id="cmHost"></div>
       <textarea id="plainEditor" spellcheck="false"></textarea>
-      <div class="edithint">Ctrl/Cmd+S untuk simpan · setelah menyimpan, lihat hasilnya di tab Preview · kode tersimpan otomatis di browser ini</div>
+      <div class="edithint">Ctrl/Cmd+S = simpan sementara di browser · klik 🚀 Publish agar perubahan tersimpan ke server &amp; tampil di semua embed</div>
     </section>
 
     <section id="pane-embed" class="pane">
@@ -160,8 +186,9 @@ pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padd
         </div>
 
         <div class="card">
-          <h3>Cara 2 — semua visual dalam satu skrip (embed.js)</h3>
-          <p>Unduh <b>embed.js</b> (tombol di bawah), upload di folder yang sama dengan website tujuan, lalu tempel kode ini.
+          <h3>Cara 2 — skrip live (embed.js) · ikut terupdate otomatis</h3>
+          <p>Tempel kode ini <b>sekali</b> di website tujuan. Skrip mengambil data langsung dari website PMIS ini,
+          jadi setiap kali Anda klik <b>🚀 Publish</b>, tampilan di website tujuan ikut terupdate tanpa menyalin ulang kode.
           Visual yang tampil mengikuti <code>data-pmis="nama file"</code>; tanpa atribut itu, semua visual tampil berurutan.</p>
           <pre id="codeEmbedJs" class="code"></pre>
           <button class="btn copy" data-copy="codeEmbedJs">📋 Salin kode</button>
@@ -169,13 +196,13 @@ pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padd
 
         <div class="card">
           <h3>Pratinjau hasil embed</h3>
-          <p class="muted">Beginilah tampilannya ketika visual ini disisipkan ke website lain (versi terkini di editor; jangan lupa klik Simpan agar permanen).</p>
+          <p class="muted">Beginilah tampilannya ketika visual ini disisipkan ke website lain (versi terkini di editor; klik 🚀 Publish agar permanen di server).</p>
           <div id="embedDemo"></div>
         </div>
 
         <div class="card">
           <h3>Unduh file untuk hosting</h3>
-          <p class="muted">Upload kedua file ini ke hosting/website tujuan Anda:</p>
+          <p class="muted">Untuk Cara 2 Anda tidak perlu mengunduh apa pun — embed.js sudah online di website ini. Unduhan di bawah hanya jika Anda ingin memasang visual secara mandiri:</p>
           <button id="btnDownload2" class="btn">⬇ Unduh HTML visual ini</button>
           <button id="btnDownloadEmbed" class="btn">⬇ Unduh embed.js</button>
         </div>
@@ -189,26 +216,69 @@ pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padd
   <iframe id="fsFrame" title="fullscreen"></iframe>
 </div>
 
+<div id="pubOverlay">
+  <div class="pubbox">
+    <div class="pubhead">
+      <div>
+        <h2>🚀 Publish ke Server (GitHub)</h2>
+        <div class="pubmuted" id="pubTarget"></div>
+      </div>
+      <button id="pubClose">✕</button>
+    </div>
+    <div class="pubsec">
+      <label>GitHub Token</label>
+      <div class="pubrow">
+        <input id="pubToken" type="password" placeholder="github_pat_… / ghp_…" autocomplete="off" spellcheck="false">
+        <label class="pubcheck"><input type="checkbox" id="pubRemember" checked> ingat di browser ini</label>
+      </div>
+      <div class="pubmuted">Token hanya tersimpan di browser Anda dan dikirim langsung ke api.github.com.
+        Buat token di <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Settings → Developer settings → Fine-grained tokens</a>
+        dengan <b>Repository access: pmis-website</b> dan permission <b>Contents → Read and write</b>.</div>
+    </div>
+    <div class="pubsec">
+      <label>Perubahan yang akan dipublish</label>
+      <div id="pubFiles" class="pubfiles"></div>
+    </div>
+    <div class="pubbar">
+      <button id="pubGo" class="btn primary">🚀 Publish sekarang</button>
+      <span id="pubStatus" class="pubmuted"></span>
+    </div>
+    <div id="pubLog"></div>
+  </div>
+</div>
+
 <!-- Sumber embed.js (teks polos, tidak dieksekusi) -->
 <script type="text/plain" id="embedJsSource">
 /* ==========================================================
-   embed.js — PMIS HTML Embed
+   embed.js — PMIS HTML Embed (LIVE)
    ----------------------------------------------------------
-   Dipakai di website TUJUAN bersama variabel window.PMIS_EMBED.
+   Dipakai di website TUJUAN. Skrip ini SELALU mengambil data
+   TERBARU langsung dari website PMIS (data.js), jadi setiap
+   kali Anda klik "Publish" di aplikasi PMIS, semua website
+   yang memasang embed ini otomatis ikut terupdate — tanpa
+   perlu menyalin ulang kode embed.
 
-   1) Sisipkan data visual (salin dari tab Embed website PMIS):
-      window.PMIS_EMBED = { height: 520, files: [ ... ] };
+   Cara pakai (cukup sekali tempel):
 
-   2) Muat file embed.js (upload ke folder website tujuan):
-      script src="embed.js"
+   1) Muat skrip embed dari website PMIS (tag script lengkap bisa
+      disalin dari tab Embed aplikasi PMIS):
+      script src="https://andrevelthuzend34-dot.github.io/pmis-website/embed.js"
 
-   3) Tentukan tempat tampilnya visual:
-      div data-pmis="Peta Kordinat BM.htm" data-height="600"
+   2) Tentukan tempat & visual yang tampil:
+      <div data-pmis="Contract_History.htm" data-height="600"></div>
+
       Tanpa elemen data-pmis, semua visual tampil berurutan
       di akhir halaman secara otomatis.
+
+   Catatan: cuplikan lama yang memakai window.PMIS_EMBED
+   tetap didukung (mode kompatibilitas).
    ========================================================== */
 (function () {
   'use strict';
+
+  var me = document.currentScript ||
+    document.querySelector('script[src*="embed.js"]');
+  var base = me ? me.src.replace(/embed\.js(\?.*)?$/, '') : '';
 
   function ready(fn) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
@@ -224,20 +294,19 @@ pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padd
     el.appendChild(f);
   }
 
-  ready(function () {
-    var data = window.PMIS_EMBED;
-    if (!data || !data.files || !data.files.length) return;
+  function render(data) {
     var defaultHeight = data.height || 520;
 
     var targets = document.querySelectorAll('[data-pmis]');
     for (var i = 0; i < targets.length; i++) {
       var nm = targets[i].getAttribute('data-pmis');
+      if (targets[i].__pmisMounted) continue;
       var h = parseInt(targets[i].getAttribute('data-height'), 10) || defaultHeight;
       var item = null;
       for (var j = 0; j < data.files.length; j++) {
         if (data.files[j].name === nm || data.files[j].title === nm) { item = data.files[j]; break; }
       }
-      if (item) mount(targets[i], item.content, h);
+      if (item) { mount(targets[i], item.content, h); targets[i].__pmisMounted = true; }
     }
 
     if (!targets.length) {
@@ -254,6 +323,113 @@ pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padd
       }
       document.body.appendChild(wrap);
     }
+  }
+
+  ready(function () {
+    /* Mode kompatibilitas: cuplikan lama dengan data inline */
+    if (window.PMIS_EMBED && window.PMIS_EMBED.files && window.PMIS_EMBED.files.length) {
+      render(window.PMIS_EMBED);
+      return;
+    }
+
+    /* Mode live: ambil data terbaru dari website PMIS.
+       ?v=timestamp mencegah cache, jadi hasil Publish langsung terlihat. */
+    var s = document.createElement('script');
+    s.src = base + 'data.js?v=' + Date.now();
+    s.onload = function () {
+      var files = window.PMIS_FILES || [];
+      if (!files.length) { console.error('PMIS embed: data.js kosong / tidak ditemukan di ' + base); return; }
+      render({ files: files, height: 520 });
+    };
+    s.onerror = function () {
+      console.error('PMIS embed: gagal memuat data.js dari ' + base + ' — pastikan file data.js ada di folder tersebut.');
+    };
+    (document.head || document.body).appendChild(s);
+  });
+})();
+</script>
+
+   2) Tentukan tempat & visual yang tampil:
+      <div data-pmis="Contract_History.htm" data-height="600"></div>
+
+      Tanpa elemen data-pmis, semua visual tampil berurutan
+      di akhir halaman secara otomatis.
+
+   Catatan: cuplikan lama yang memakai window.PMIS_EMBED
+   tetap didukung (mode kompatibilitas).
+   ========================================================== */
+(function () {
+  'use strict';
+
+  var me = document.currentScript ||
+    document.querySelector('script[src*="embed.js"]');
+  var base = me ? me.src.replace(/embed\.js(\?.*)?$/, '') : '';
+
+  function ready(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+
+  function mount(el, code, height) {
+    var f = document.createElement('iframe');
+    f.setAttribute('style', 'width:100%;height:' + height + 'px;border:0;border-radius:8px;background:#fff');
+    f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-forms');
+    f.setAttribute('loading', 'lazy');
+    f.srcdoc = code;
+    el.appendChild(f);
+  }
+
+  function render(data) {
+    var defaultHeight = data.height || 520;
+
+    var targets = document.querySelectorAll('[data-pmis]');
+    for (var i = 0; i < targets.length; i++) {
+      var nm = targets[i].getAttribute('data-pmis');
+      if (targets[i].__pmisMounted) continue;
+      var h = parseInt(targets[i].getAttribute('data-height'), 10) || defaultHeight;
+      var item = null;
+      for (var j = 0; j < data.files.length; j++) {
+        if (data.files[j].name === nm || data.files[j].title === nm) { item = data.files[j]; break; }
+      }
+      if (item) { mount(targets[i], item.content, h); targets[i].__pmisMounted = true; }
+    }
+
+    if (!targets.length) {
+      var wrap = document.createElement('div');
+      wrap.setAttribute('style', 'max-width:960px;margin:0 auto;padding:16px');
+      for (var k = 0; k < data.files.length; k++) {
+        var it = data.files[k];
+        var h3 = document.createElement('h3');
+        h3.textContent = it.title || it.name;
+        var box = document.createElement('div');
+        mount(box, it.content, defaultHeight);
+        wrap.appendChild(h3);
+        wrap.appendChild(box);
+      }
+      document.body.appendChild(wrap);
+    }
+  }
+
+  ready(function () {
+    /* Mode kompatibilitas: cuplikan lama dengan data inline */
+    if (window.PMIS_EMBED && window.PMIS_EMBED.files && window.PMIS_EMBED.files.length) {
+      render(window.PMIS_EMBED);
+      return;
+    }
+
+    /* Mode live: ambil data terbaru dari website PMIS.
+       ?v=timestamp mencegah cache, jadi hasil Publish langsung terlihat. */
+    var s = document.createElement('script');
+    s.src = base + 'data.js?v=' + Date.now();
+    s.onload = function () {
+      var files = window.PMIS_FILES || [];
+      if (!files.length) { console.error('PMIS embed: data.js kosong / tidak ditemukan di ' + base); return; }
+      render({ files: files, height: 520 });
+    };
+    s.onerror = function () {
+      console.error('PMIS embed: gagal memuat data.js dari ' + base + ' — pastikan file data.js ada di folder tersebut.');
+    };
+    (document.head || document.body).appendChild(s);
   });
 })();
 </script>
@@ -325,7 +501,7 @@ pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padd
       d.onclick = function () { selectFile(i); };
       fileList.appendChild(d);
     });
-    $('fileCount').textContent = FILES.length + ' visual · editan tersimpan otomatis di browser ini';
+    $('fileCount').textContent = FILES.length + ' visual · klik 🚀 Publish untuk simpan ke server';
   }
 
   /* ---------- editor ---------- */
@@ -446,15 +622,13 @@ pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padd
       '        loading="lazy"></iframe>';
 
     var S = '<' + 'script', E = '<' + '/script';
-    var entry = { name: FILES[cur].name, title: FILES[cur].title, content: editorValue() };
-    var json = JSON.stringify({ height: 520, files: [entry] }, null, 2);
 
+    /* Cara 2 sekarang memakai embed.js LIVE: sekali tempel, selalu data terbaru
+       dari website PMIS. Tidak ada lagi snapshot inline yang harus disalin ulang. */
     $('codeEmbedJs').textContent =
-      '<!-- 1) Data visual -->\n' +
-      S + '>window.PMIS_EMBED = ' + json + ';' + E + '>\n\n' +
-      '<!-- 2) Skrip embed (upload embed.js ke folder yang sama) -->\n' +
-      S + ' src="embed.js">' + E + '>\n\n' +
-      '<!-- 3) (opsional) tempat tampilnya visual -->\n' +
+      '<!-- 1) Skrip embed PMIS (sekali tempel, selalu data terbaru) -->\n' +
+      S + ' src="' + embedUrl + '">' + E + '>\n\n' +
+      '<!-- 2) Tempat tampilnya visual -->\n' +
       '<div data-pmis="' + FILES[cur].name + '" data-height="520"></div>';
 
     /* pratinjau hasil embed */
@@ -539,6 +713,200 @@ pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padd
     }
   }
 
+  /* ---------- publish ke GitHub (server) ---------- */
+  var GH_TOKEN_KEY = 'pmis_gh_token_v1';
+  var pubBusy = false;
+
+  function ghRepoInfo() {
+    var host = location.hostname;
+    if (host.indexOf('.github.io') === -1) return null;   // fitur hanya dari GitHub Pages
+    var parts = location.pathname.split('/').filter(Boolean);
+    var owner = host.split('.')[0];
+    var repo = parts.length ? parts[0] : owner;           // project page / user page
+    return { owner: owner, repo: repo };
+  }
+  function ghToken() { try { return localStorage.getItem(GH_TOKEN_KEY) || ''; } catch (e) { return ''; } }
+  function b64Utf8(s) {
+    var bytes = new TextEncoder().encode(s), bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+  function ghApi(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({
+      'Accept': 'application/vnd.github+json',
+      'Authorization': 'Bearer ' + ghToken(),
+      'X-GitHub-Api-Version': '2022-11-28'
+    }, opts.headers || {});
+    if (opts.body) opts.headers['Content-Type'] = 'application/json';
+    return fetch('https://api.github.com' + path, opts).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (!r.ok) {
+          var err = new Error((j && j.message) || ('HTTP ' + r.status));
+          err.status = r.status;
+          throw err;
+        }
+        return j;
+      });
+    });
+  }
+
+  /* Susun ulang data.js persis seperti format build-data.js:
+     konten asli + seluruh editan lokal (localStorage) digabung. */
+  function buildDataJs() {
+    var o = loadOverrides();
+    var files = FILES.map(function (f) {
+      var rec = o[f.name];
+      return {
+        name: f.name,
+        title: f.title,
+        content: (rec && typeof rec.content === 'string') ? rec.content : f.content
+      };
+    });
+    return '// Dibuat otomatis oleh build-data.js — jangan edit manual.\n' +
+           '// Untuk memperbarui isi, jalankan:  node build-data.js\n' +
+           'window.PMIS_FILES = ' + JSON.stringify(files, null, 2) + ';\n';
+  }
+  window.__pmisBuildDataJs = buildDataJs;   // hook untuk pengujian
+
+  function modifiedIdx() {
+    var out = [];
+    for (var i = 0; i < FILES.length; i++) if (isModified(i)) out.push(i);
+    return out;
+  }
+
+  function pubLogMsg(s) {
+    var el = $('pubLog');
+    el.classList.add('has');
+    el.textContent += s + '\n';
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function openPublish() {
+    var ri = ghRepoInfo();
+    var mod = modifiedIdx();
+    $('pubFiles').innerHTML = '';
+    if (dirty) {
+      var dw = document.createElement('div');
+      dw.className = 'pubfile';
+      dw.style.color = '#ffd28a';
+      dw.textContent = '⚠ Editor masih ada perubahan yang belum disimpan — klik 💾 Simpan dulu jika ingin ikut dipublish.';
+      $('pubFiles').appendChild(dw);
+    }
+    if (!mod.length) {
+      var dn = document.createElement('div');
+      dn.className = 'pubfile';
+      dn.style.color = '#9fc6dd';
+      dn.textContent = 'Tidak ada perubahan baru — semua visual sama dengan versi di server.';
+      $('pubFiles').appendChild(dn);
+    } else {
+      mod.forEach(function (i) {
+        var d = document.createElement('div');
+        d.className = 'pubfile';
+        d.textContent = '● ' + FILES[i].name + ' — ' + FILES[i].title;
+        $('pubFiles').appendChild(d);
+      });
+    }
+    if (!ri) {
+      $('pubTarget').innerHTML = '⚠ Publish hanya bisa dipakai dari website PMIS yang online di GitHub Pages.';
+      $('pubGo').disabled = true;
+    } else {
+      $('pubTarget').textContent = 'Target: github.com/' + ri.owner + '/' + ri.repo + ' → data.js';
+      $('pubGo').disabled = false;
+    }
+    $('pubToken').value = ghToken();
+    $('pubStatus').textContent = '';
+    $('pubLog').textContent = '';
+    $('pubLog').classList.remove('has');
+    $('pubOverlay').classList.add('open');
+  }
+
+  function publishNow() {
+    if (pubBusy) return;
+    var ri = ghRepoInfo();
+    if (!ri) return;
+    var tok = $('pubToken').value.trim();
+    if (!tok) {
+      $('pubStatus').innerHTML = '<span class="puberr">Token belum diisi — lihat tautan cara membuat token di atas.</span>';
+      return;
+    }
+    try {
+      if ($('pubRemember').checked) localStorage.setItem(GH_TOKEN_KEY, tok);
+      else localStorage.removeItem(GH_TOKEN_KEY);
+    } catch (e) {}
+
+    pubBusy = true;
+    $('pubGo').disabled = true;
+    $('pubLog').textContent = '';
+    $('pubLog').classList.remove('has');
+    var st = $('pubStatus');
+    st.textContent = 'Memeriksa repo…';
+
+    var repoPath = '/repos/' + ri.owner + '/' + ri.repo;
+    var dataJs = buildDataJs();
+    var mod = modifiedIdx();
+    var msg = 'Publish via PMIS editor: ' +
+      (mod.length ? mod.map(function (i) { return FILES[i].name; }).join(', ') : 'sinkronisasi data.js') +
+      ' (' + new Date().toISOString() + ')';
+    var branch = null, sha = null;
+
+    ghApi(repoPath)
+      .then(function (r) {
+        branch = r.default_branch;
+        pubLogMsg('✓ Repo ditemukan · branch utama: ' + branch);
+        st.textContent = 'Mencari data.js…';
+        return ghApi(repoPath + '/contents/data.js?ref=' + encodeURIComponent(branch));
+      })
+      .then(function (f) { sha = f.sha; pubLogMsg('✓ data.js ditemukan — versi lama akan diganti.'); })
+      .catch(function (e) {
+        if (e.status === 404) { pubLogMsg('ℹ data.js belum ada di repo — akan dibuat baru.'); return; }
+        throw e;
+      })
+      .then(function () {
+        st.textContent = 'Mengunggah ke GitHub…';
+        var body = { message: msg, content: b64Utf8(dataJs), branch: branch };
+        if (sha) body.sha = sha;
+        return ghApi(repoPath + '/contents/data.js', { method: 'PUT', body: JSON.stringify(body) });
+      })
+      .then(function (res) {
+        /* samakan status lokal dengan versi yang sudah dipublish */
+        var o = loadOverrides();
+        FILES.forEach(function (f) {
+          var rec = o[f.name];
+          if (rec && typeof rec.content === 'string') f.content = rec.content;
+        });
+        try { localStorage.removeItem(LS_KEY); } catch (e) {}
+        dirty = false;
+        markDirty(false);
+        initEditor(getContent(cur));
+        renderPreview();
+        renderList();
+        statusChip.textContent = '✓ Tersinkron dengan server';
+        st.innerHTML = '<span class="pubok">✓ Terpublish ke GitHub!</span>';
+        pubLogMsg('✓ Commit berhasil' + (res && res.commit && res.commit.sha ? ' (' + res.commit.sha.slice(0, 7) + ')' : '') + '.');
+        pubLogMsg('GitHub Pages deploy ±1 menit. Browser bisa menampilkan versi lama hingga 10 menit.');
+        pubLogMsg('Semua embed (iframe & embed.js) otomatis menampilkan versi terbaru.');
+      })
+      .catch(function (e) {
+        var m;
+        if (e.status === 401) m = 'Token tidak valid (401). Periksa kembali token Anda.';
+        else if (e.status === 403) m = 'Akses ditolak (403). Pastikan token fine-grained memilih repo ini dan punya permission Contents: Read and write, serta belum kedaluwarsa.';
+        else if (e.status === 409 || e.status === 422) m = 'Konflik: data.js berubah di server sejak dicek. Klik Publish sekali lagi.';
+        else if (e.name === 'TypeError') m = 'Jaringan gagal menghubungi api.github.com. Periksa koneksi internet.';
+        else m = 'Gagal' + (e.status ? ' (HTTP ' + e.status + ')' : '') + ': ' + e.message;
+        st.innerHTML = '<span class="puberr">' + esc(m) + '</span>';
+        pubLogMsg('✗ ' + m);
+      })
+      .then(function () {
+        pubBusy = false;
+        $('pubGo').disabled = false;
+      });
+  }
+
+  $('btnPublish').onclick = openPublish;
+  $('pubClose').onclick = function () { $('pubOverlay').classList.remove('open'); };
+  $('pubGo').onclick = publishNow;
+
   /* ---------- tombol ---------- */
   btnSave.onclick = doSave;
   $('btnRevert').onclick = doRevert;
@@ -560,7 +928,7 @@ pre.code { background:#071e30; border:1px solid #14405e; border-radius:8px; padd
   };
   $('fsClose').onclick = function () { $('fsOverlay').classList.remove('open'); };
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') $('fsOverlay').classList.remove('open');
+    if (e.key === 'Escape') { $('fsOverlay').classList.remove('open'); $('pubOverlay').classList.remove('open'); }
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
       if (tab === 'form') applyForm(false); else doSave();
